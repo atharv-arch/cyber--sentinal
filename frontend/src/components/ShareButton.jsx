@@ -36,6 +36,36 @@ export default function ShareButton({ intelBundle, aiReport }) {
     } catch {}
   }
 
+  const handleSTIXExport = () => {
+    const stixBundle = {
+      type: "bundle",
+      id: `bundle--${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
+      spec_version: "2.1",
+      objects: [
+        {
+          type: "indicator",
+          name: intelBundle.input,
+          pattern_type: "stix",
+          pattern: `[${intelBundle.type}:value = '${intelBundle.input}']`,
+          valid_from: new Date().toISOString()
+        },
+        {
+          type: "report",
+          name: "CyberSentinel Automated Analysis",
+          description: aiReport?.verdict || "No verdict generated",
+          published: new Date().toISOString(),
+          object_refs: []
+        }
+      ]
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(stixBundle, null, 2));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", `STIX2.1_${intelBundle.input.replace(/[^a-z0-9]/gi, '_')}.json`);
+    dlAnchorElem.click();
+  }
+
   const daysLeft = expiresAt
     ? Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24))
     : null
@@ -56,10 +86,18 @@ export default function ShareButton({ intelBundle, aiReport }) {
         </div>
       </div>
 
-      <button onClick={handleShare} disabled={saving}
-        className="w-full bg-primary/10 hover:bg-primary/20 border border-primary/50 text-primary py-3 font-mono text-xs font-bold uppercase tracking-widest transition-all">
-        {saving ? 'ENCRYPTING PAYLOAD...' : copied ? 'COPIED TO CLIPBOARD' : shareUrl ? 'COPY LINK' : 'INITIALIZE UPLINK'}
-      </button>
+      <div className="w-full flex flex-col gap-2">
+        <button onClick={handleShare} disabled={saving}
+          className="w-full bg-primary/10 hover:bg-primary/20 border border-primary/50 text-primary py-3 font-mono text-[10px] font-bold uppercase tracking-widest transition-all">
+          {saving ? 'ENCRYPTING PAYLOAD...' : copied ? 'COPIED TO CLIPBOARD' : shareUrl ? 'COPY LINK' : 'INITIALIZE UPLINK'}
+        </button>
+
+        <button onClick={handleSTIXExport}
+          className="w-full bg-slate-900 border border-outline-variant/30 text-slate-400 hover:text-white py-2 font-mono text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+          <span className="material-symbols-outlined text-[14px]">download</span>
+          STIX 2.1 EXPORT
+        </button>
+      </div>
 
       {shareUrl && (
         <div className="mt-3 bg-slate-900 border border-outline-variant/30 p-2 w-full flex items-center gap-2">

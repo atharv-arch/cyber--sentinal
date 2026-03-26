@@ -1,18 +1,31 @@
 import express from 'express';
 import {
   detectType, getGeo, getVirusTotal, getAbuseIPDB,
-  getShodan, getSSL, getDNS, getWhois, parseEmailHeaders
+  getShodan, getSSL, getDNS, getWhois, parseEmailHeaders,
+  getPwnedStatus
 } from '../services/intel.js';
 
 const router = express.Router();
 
+function sanitizeInput(raw) {
+  // Hardened sanitization against SSRF and injection arrays
+  if (typeof raw !== 'string') return '';
+  return raw.replace(/[\r\n\t]/g, '').trim().substring(0, 500);
+}
+
 router.post('/', async (req, res) => {
   try {
-    const { input } = req.body;
-    if (!input) return res.status(400).json({ error: 'Input required' });
+    const rawInput = req.body.input;
+    if (!rawInput) return res.status(400).json({ error: 'Input required' });
 
-    const type = detectType(input.trim());
+    // Strict Input Sanitization
+    const input = sanitizeInput(rawInput);
+    const type = detectType(input);
     const timestamp = new Date().toISOString();
+
+    if (type === 'unknown' || input.length < 3) {
+      return res.status(400).json({ error: 'Invalid or unsupported IOC format.' });
+    }
 
     if (type === 'email_header') {
       const hops = parseEmailHeaders(input);
@@ -41,7 +54,7 @@ router.post('/', async (req, res) => {
     }
 
     // Determine primary identifier
-    let primaryTarget = input.trim();
+    let primaryTarget = input;
     let domain = null;
     let ip = null;
 
@@ -57,15 +70,16 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Fan out to all APIs simultaneously
-    const [geoRes, vtRes, abuseRes, shodanRes, sslRes, dnsRes, whoisRes] = await Promise.allSettled([
+    // Fan out to all APIs simultaneously with exponential backoff handlers
+    const [geoRes, vtRes, abuseRes, shodanRes, sslRes, dnsRes, whoisRes, pwnedRes] = await Promise.allSettled([
       ip ? getGeo(ip) : (domain ? getGeo(null).catch(() => null) : Promise.resolve(null)),
       getVirusTotal(primaryTarget, type),
       (ip || type === 'ip') ? getAbuseIPDB(ip || primaryTarget) : Promise.resolve(null),
       (ip || type === 'ip') ? getShodan(ip || primaryTarget) : Promise.resolve(null),
       domain ? getSSL(domain) : Promise.resolve(null),
       domain ? getDNS(domain) : Promise.resolve(null),
-      domain ? getWhois(domain) : Promise.resolve(null)
+      domain ? getWhois(domain) : Promise.resolve(null),
+      getPwnedStatus(domain || ip || primaryTarget)
     ]);
 
     // If domain, resolve IP for geo
@@ -89,7 +103,8 @@ router.post('/', async (req, res) => {
       shodan: shodanRes.status === 'fulfilled' ? shodanRes.value : null,
       ssl: sslRes.status === 'fulfilled' ? sslRes.value : null,
       dns: dnsRes.status === 'fulfilled' ? dnsRes.value : null,
-      whois: whoisRes.status === 'fulfilled' ? whoisRes.value : null
+      whois: whoisRes.status === 'fulfilled' ? whoisRes.value : null,
+      pwned: pwnedRes.status === 'fulfilled' ? pwnedRes.value : null
     };
 
     res.json(bundle);

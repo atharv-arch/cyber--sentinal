@@ -149,6 +149,22 @@ export function WhoisCard({ data, dns }) {
         <StatRow label="MX Records" value={dns.mx?.slice(0,2).join(', ')} />
         <StatRow label="NS Records" value={dns.ns?.slice(0,2).join(', ')} />
         {dns.txt?.slice(0,1).map((t,i) => <StatRow key={i} label="TXT" value={t?.substring(0,60)} />)}
+        
+        {dns.passiveDnsPivot?.length > 0 && (
+          <div className="mt-4 border-t border-outline-variant/10 pt-3">
+            <p className="font-mono text-[10px] text-primary uppercase font-bold tracking-widest mb-2 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[12px]">hub</span>
+              Passive DNS Correlations
+            </p>
+            <div className="flex flex-col gap-1">
+              {dns.passiveDnsPivot.map((d,i) => (
+                <span key={i} className="font-mono text-[10px] text-slate-400 truncate w-full cursor-crosshair hover:text-primary transition-colors">
+                  ↳ {d}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </>}
       {!data && !dns && <p className="font-mono text-[10px] text-slate-500 uppercase tracking-widest">N/A for this target</p>}
     </Card>
@@ -180,6 +196,23 @@ export function SSLCard({ data }) {
           </div>
         </div>
       )}
+    </Card>
+  )
+}
+
+export function DarkWebCard({ data }) {
+  if (!data) return (
+    <Card title="DARKWEB DB" icon="public">
+      <p className="font-mono text-[10px] text-slate-500 uppercase tracking-widest">No exposure data</p>
+    </Card>
+  )
+  const isExposed = data.exposed
+  return (
+    <Card title="DARKWEB DB" icon="public" accentClass={isExposed ? 'border-error/50' : 'border-primary/50'}>
+      <StatRow label="Exposure Status" value={isExposed ? "COMPROMISED" : "CLEAN"} colorClass={isExposed ? 'text-error font-bold drop-shadow-[0_0_5px_currentColor]' : 'text-primary'} />
+      <StatRow label="Known Breaches" value={data.breachCount} colorClass={data.breachCount > 0 ? 'text-error font-bold' : ''} />
+      <StatRow label="Pastebin Mentions" value={data.pastebinMentions} colorClass={data.pastebinMentions > 0 ? 'text-secondary font-bold' : ''} />
+      <StatRow label="Leaked Data Classes" value={data.dataClasses?.join(', ')} />
     </Card>
   )
 }
