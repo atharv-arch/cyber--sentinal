@@ -9,7 +9,7 @@ export default function ShareButton({ intelBundle, aiReport }) {
 
   const handleShare = async () => {
     if (shareUrl) {
-      copyToClipboard()
+      await copyToClipboard()
       return
     }
     setSaving(true)
@@ -41,21 +41,33 @@ export default function ShareButton({ intelBundle, aiReport }) {
     : null
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full">
-      <div className="text-3xl">🔗</div>
-      <div className="text-center">
-        <p className="font-mono text-xs font-bold" style={{ color: 'var(--text-muted)' }}>SHARE REPORT</p>
-        {daysLeft && <p className="font-mono text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Expires in {daysLeft} days</p>}
+    <div className="flex flex-col items-center justify-center p-6 bg-surface-container-lowest border border-outline-variant/30 w-full max-w-sm ml-auto relative group overflow-hidden">
+      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+      
+      <div className="flex items-center gap-3 mb-4">
+        <span className="material-symbols-outlined text-primary text-2xl drop-shadow-[0_0_8px_#46f1c5]">share</span>
+        <div className="text-left">
+          <p className="font-headline text-sm font-bold tracking-widest text-slate-300 uppercase">SHARE MISSION REPORT</p>
+          {daysLeft ? (
+            <p className="font-mono text-[9px] text-[#fbbf24] uppercase tracking-widest mt-0.5">Expires in {daysLeft} Days</p>
+          ) : (
+            <p className="font-mono text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Generates Immutable Link</p>
+          )}
+        </div>
       </div>
+
       <button onClick={handleShare} disabled={saving}
-        className="btn-primary w-full py-2 text-xs">
-        {saving ? '⟳ Saving…' : copied ? '✓ Copied!' : shareUrl ? '📋 Copy Link' : '⬆ Generate Link'}
+        className="w-full bg-primary/10 hover:bg-primary/20 border border-primary/50 text-primary py-3 font-mono text-xs font-bold uppercase tracking-widest transition-all">
+        {saving ? 'ENCRYPTING PAYLOAD...' : copied ? 'COPIED TO CLIPBOARD' : shareUrl ? 'COPY LINK' : 'INITIALIZE UPLINK'}
       </button>
+
       {shareUrl && (
-        <p className="font-mono text-[10px] text-center break-all px-2"
-          style={{ color: 'var(--accent-teal)' }}>
-          {shareUrl}
-        </p>
+        <div className="mt-3 bg-slate-900 border border-outline-variant/30 p-2 w-full flex items-center gap-2">
+          <span className="material-symbols-outlined text-[14px] text-slate-500">link</span>
+          <p className="font-mono text-[9px] text-primary truncate max-w-full m-0 select-all">
+            {shareUrl}
+          </p>
+        </div>
       )}
     </div>
   )

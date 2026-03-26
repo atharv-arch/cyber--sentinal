@@ -1,28 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 
-function Message({ role, content }) {
-  return (
-    <div className={`flex gap-3 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
-      <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm"
-        style={{
-          background: role === 'user' ? 'rgba(0,212,170,0.15)' : 'var(--bg-card)',
-          border: `1px solid ${role === 'user' ? 'rgba(0,212,170,0.3)' : 'var(--border-dim)'}`
-        }}>
-        {role === 'user' ? '👤' : '🤖'}
-      </div>
-      <div className={`flex-1 px-3 py-2 text-sm ${role === 'user' ? 'chat-user' : 'chat-assistant'}`}
-        style={{ maxWidth: '85%', fontFamily: 'var(--font-display)', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
-        {content}
-      </div>
-    </div>
-  )
-}
-
 const STARTER_QUESTIONS = [
-  'What firewall rule should I add to block this?',
-  'Is this linked to ransomware campaigns?',
-  'What countries has this IP operated from?',
-  'What SIEM detection rule should I write?'
+  'Is this linked to ransomware?',
+  'Suggest a firewall rule'
 ]
 
 export default function ThreatChat({ intelBundle, aiReport }) {
@@ -52,10 +32,7 @@ export default function ThreatChat({ intelBundle, aiReport }) {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          context
-        })
+        body: JSON.stringify({ messages: newMessages, context })
       })
 
       const reader = response.body.getReader()
@@ -90,54 +67,82 @@ export default function ThreatChat({ intelBundle, aiReport }) {
   }
 
   return (
-    <div className="fade-in delay-8">
-      <h3 className="font-mono text-xs font-bold tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
-        THREAT CHAT
-      </h3>
-      <div className="card flex flex-col gap-3" style={{ borderColor: 'rgba(0,212,170,0.1)' }}>
-        {/* Starter questions */}
-        {messages.length === 0 && (
-          <div className="flex flex-wrap gap-2">
-            {STARTER_QUESTIONS.map((q, i) => (
-              <button key={i} onClick={() => send(q)}
-                className="font-mono text-[11px] px-3 py-1.5 rounded-lg transition-all text-left"
-                style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border-dim)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-teal)'; e.currentTarget.style.color = 'var(--accent-teal)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-dim)'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
-                {q}
-              </button>
-            ))}
+    <div className="flex-1 flex flex-col pt-0 relative max-h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {messages.length === 0 && !streamText ? (
+          <div className="flex-1 p-6 flex flex-col items-center justify-center text-center opacity-60 mt-10">
+            <div className="w-16 h-16 border border-outline-variant/30 flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-4xl text-slate-700">chat_bubble</span>
+            </div>
+            <p className="font-mono text-[10px] text-slate-500 max-w-[200px] leading-relaxed">System standby. Awaiting telemetry data or tactical inquiries.</p>
           </div>
-        )}
-
-        {/* Messages */}
-        {(messages.length > 0 || streamText) && (
-          <div className="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
-            {messages.map((m, i) => <Message key={i} role={m.role} content={m.content} />)}
-            {streamText && <Message role="assistant" content={streamText + '▊'} />}
+        ) : (
+          <div className="space-y-4 pb-4">
+            {messages.map((m, i) => (
+              m.role === 'user' ? (
+                <div key={i} className="flex flex-col gap-1 items-end">
+                  <div className="text-[9px] font-mono text-slate-500 mb-1 mr-2">ANALYST_01</div>
+                  <div className="bg-surface-container-high p-3 max-w-[90%] border border-outline-variant/10">
+                    <p className="font-mono text-xs text-on-surface/80 whitespace-pre-wrap">{m.content}</p>
+                  </div>
+                </div>
+              ) : (
+                <div key={i} className="flex flex-col gap-1">
+                  <div className="text-[9px] font-mono text-primary/60 mb-1 ml-2">CYBERSENTINEL_AI</div>
+                  <div className="bg-primary/5 border-l-2 border-primary p-3">
+                    <p className="font-mono text-xs text-primary/90 whitespace-pre-wrap">{m.content}</p>
+                  </div>
+                </div>
+              )
+            ))}
+            {streamText && (
+              <div className="flex flex-col gap-1">
+                <div className="text-[9px] font-mono text-primary/60 mb-1 ml-2">CYBERSENTINEL_AI</div>
+                <div className="bg-primary/5 border-l-2 border-primary p-3">
+                  <p className="font-mono text-xs text-primary/90 whitespace-pre-wrap">{streamText}<span className="animate-pulse">_</span></p>
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
         )}
 
-        {/* Input */}
-        <div className="flex gap-2">
+        {messages.length === 0 && (
+          <div className="mt-8 space-y-3">
+            {STARTER_QUESTIONS.map((q, i) => (
+              <button key={i} onClick={() => send(q)}
+                className="w-full text-left p-3 border border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5 transition-all text-slate-400 hover:text-primary group">
+                <span className="font-mono text-[11px] block mb-1">PROMPT_0{i+1}</span>
+                <span className="font-body text-xs leading-snug">{q}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-outline-variant/10 bg-slate-950/50 mt-auto shrink-0">
+        <div className="relative flex items-center">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Ask anything about this threat…"
-            className="flex-1 px-3 py-2 text-sm"
             disabled={streaming}
+            className="w-full bg-transparent border-b border-outline text-primary font-mono text-xs focus:border-primary transition-all py-2 pr-10 focus:ring-0 outline-none placeholder:text-slate-700"
+            placeholder="TYPE_COMMAND..."
           />
           <button onClick={() => send()} disabled={streaming || !input.trim()}
-            className="btn-primary px-4 py-2 text-sm shrink-0">
-            {streaming ? (
-              <span className="flex items-center gap-1.5">
-                <span className="blink-dot" style={{ background: 'var(--bg-primary)' }} />
-                AI
-              </span>
-            ) : 'Send'}
+            className="absolute right-0 text-primary hover:scale-110 active:scale-95 transition-transform disabled:opacity-50">
+            <span className="material-symbols-outlined">send</span>
+          </button>
+        </div>
+        <div className="mt-4 flex justify-between items-center">
+          <span className="font-mono text-[9px] text-slate-600 truncate mr-2">
+            CONTEXT_ID: {intelBundle ? intelBundle.input.substring(0, 15) : 'NONE'}
+          </span>
+          <button onClick={() => send()} disabled={streaming || !input.trim()}
+            className="bg-primary/10 border border-primary/30 text-primary py-1.5 px-3 font-mono text-[10px] font-bold tracking-widest hover:bg-primary/20 transition-all uppercase whitespace-nowrap">
+            {streaming ? 'PROCESSING...' : 'EXECUTE'}
           </button>
         </div>
       </div>

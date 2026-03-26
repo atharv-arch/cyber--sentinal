@@ -1,53 +1,99 @@
-const API_LABELS = { geo: 'GeoIP', virustotal: 'VirusTotal', abuseipdb: 'AbuseIPDB', shodan: 'Shodan', ssl: 'crt.sh / SSL', dns: 'DNS', whois: 'WHOIS', ai: 'Claude AI' }
+const API_LABELS = { 
+  geo: 'GEOLOCATION_ORACLE', 
+  virustotal: 'VIRUSTOTAL_HASH_DB', 
+  abuseipdb: 'ABUSEIPDB_REPUTATION', 
+  shodan: 'SHODAN_PORT_ENUMERATOR', 
+  ssl: 'SSL_CERT_AUTHORITY', 
+  dns: 'DNS_RESOLVER', 
+  whois: 'WHOIS_REGISTRANT', 
+  ai: 'NEURAL_LINK_SYNTHESIS' 
+}
+
+const API_STATES = {
+  geo: 'MAPPING_LAT_LONG_COORDINATES...',
+  virustotal: 'QUERYING_HASH_DATABASE...',
+  abuseipdb: 'REPUTATION_SCORE_CALCULATION...',
+  shodan: 'OPEN_PORT_ENUMERATION_v2...',
+  ssl: 'VERIFYING_SSL_CHAIN...',
+  dns: 'RESOLVING_A_RECORDS...',
+  whois: 'FETCHING_REGISTRANT_DETAILS...',
+  ai: 'INITIALIZING_NEURAL_NET...'
+}
 
 export default function LoadingState({ apiStatuses = {} }) {
+  const keys = Object.keys(apiStatuses)
+  const doneCount = keys.filter(k => apiStatuses[k] === 'done').length
+  const progress = `${Math.round((doneCount / (keys.length || 1)) * 100)}%`
+
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-8">
-      {/* Animated logo */}
-      <div className="relative flex items-center justify-center">
-        <div className="absolute w-24 h-24 rounded-full border-2 border-teal/20 animate-ping" />
-        <div className="absolute w-16 h-16 rounded-full border border-teal/30 animate-pulse" />
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L3 7v5c0 5.25 3.9 10.15 9 11.35C17.1 22.15 21 17.25 21 12V7L12 2z"
-            fill="rgba(0,212,170,0.15)" stroke="#00d4aa" strokeWidth="1.5"/>
-          <path d="M9 12l2 2 4-4" stroke="#00d4aa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+    <div className="h-full relative flex flex-col items-center justify-center -m-6 p-6">
+      {/* PROGRESS BAR (TOP) */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-surface-container-high z-10">
+        <div className="h-full bg-primary shadow-[0_0_10px_#46f1c5] transition-all duration-1000 ease-out progress-stripe"
+             style={{ width: progress }}></div>
       </div>
-
-      {/* Title */}
-      <div className="text-center">
-        <p className="font-display font-bold text-xl mb-1" style={{ color: 'var(--accent-teal)' }}>
-          Scanning Threat Intelligence
-        </p>
-        <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-          Fanning out across {Object.keys(apiStatuses).length} data sources…
-        </p>
+      
+      {/* BACKGROUND TEXT */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+        <h1 className="text-[12vw] font-headline font-bold uppercase tracking-[0.2em] text-on-surface opacity-[0.02] whitespace-nowrap">
+          ANALYZING...
+        </h1>
       </div>
+      
+      <div className="w-full max-w-2xl space-y-4 relative z-10 mt-10">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="font-headline text-2xl font-bold tracking-widest text-primary uppercase">System Analysis</div>
+            <div className="font-mono text-xs text-slate-500 uppercase tracking-widest">Target: ACTIVE / session_id: f8a2-99m1</div>
+          </div>
+          <div className="text-right">
+            <div className="font-mono text-2xl text-primary drop-shadow-[0_0_10px_rgba(70,241,197,0.4)]">{progress}</div>
+            <div className="font-mono text-[10px] text-slate-500 uppercase tracking-tighter">Global Progress</div>
+          </div>
+        </div>
 
-      {/* API status grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-xl">
-        {Object.entries(apiStatuses).map(([key, status]) => {
-          const color = status === 'done' ? '#00d4aa' : status === 'error' ? '#ef4444' : status === 'skipped' ? '#475569' : '#f59e0b'
-          return (
-            <div key={key} className="card flex items-center gap-2 py-2.5">
-              <span className="blink-dot" style={{
-                background: color,
-                animation: status === 'loading' ? undefined : 'none',
-                flexShrink: 0
-              }} />
-              <span className="font-mono text-[11px] truncate" style={{ color: status === 'loading' ? color : 'var(--text-secondary)' }}>
-                {API_LABELS[key]}
-              </span>
-              {status === 'done' && <span style={{ color: '#00d4aa', fontSize: '10px', marginLeft: 'auto' }}>✓</span>}
-              {status === 'error' && <span style={{ color: '#ef4444', fontSize: '10px', marginLeft: 'auto' }}>✗</span>}
-            </div>
-          )
-        })}
+        {/* API STATUS ROWS */}
+        <div className="space-y-[1px] bg-outline-variant/10 border border-outline-variant/20 shadow-xl">
+          {Object.entries(apiStatuses).map(([key, status]) => {
+            const isLoading = status === 'loading'
+            const isDone = status === 'done'
+            const isErr = status === 'error'
+            const colorClass = isDone ? 'text-primary' : isErr ? 'text-error' : isLoading ? 'text-secondary' : 'text-slate-500'
+            const dotClass = isDone ? 'bg-primary' : isErr ? 'bg-error' : isLoading ? 'bg-secondary animate-pulse-amber' : 'bg-slate-700'
+            const stateMsg = isDone ? 'O_X_CLEAR' : isErr ? 'FAIL_STATE' : isLoading ? API_STATES[key] : 'STANDBY'
+
+            return (
+              <div key={key} className="bg-surface-container-low p-4 flex items-center justify-between group hover:bg-surface-container-high transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className={`w-2 h-2 rounded-full ${dotClass}`}></div>
+                  <span className={`font-mono text-xs ${colorClass} w-40 truncate`}>{API_LABELS[key] || key.toUpperCase()}</span>
+                  <span className="font-mono text-xs text-slate-400 hidden sm:inline-block">{stateMsg}</span>
+                </div>
+                <div className="font-mono text-[10px] text-slate-600 uppercase">
+                  0x{Math.floor(Math.random() * 9000 + 1000).toString(16).toUpperCase()}_STATUS
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        
+        {/* TACTICAL LOGS BOTTOM */}
+        <div className="mt-8 grid grid-cols-3 gap-6 fade-in delay-2">
+          <div className="p-4 border border-outline-variant/10 bg-surface-container-lowest">
+            <div className="font-mono text-[10px] text-slate-500 mb-2 uppercase">Network Jitter</div>
+            <div className="font-mono text-lg text-primary tracking-tighter">0.02ms</div>
+          </div>
+          <div className="p-4 border border-outline-variant/10 bg-surface-container-lowest">
+            <div className="font-mono text-[10px] text-slate-500 mb-2 uppercase">Packet Loss</div>
+            <div className="font-mono text-lg text-primary tracking-tighter">0.00%</div>
+          </div>
+          <div className="p-4 border border-outline-variant/10 bg-surface-container-lowest">
+            <div className="font-mono text-[10px] text-slate-500 mb-2 uppercase">Thread Count</div>
+            <div className="font-mono text-lg text-primary tracking-tighter">1,024</div>
+          </div>
+        </div>
+
       </div>
-
-      <p className="font-mono text-xs animate-pulse" style={{ color: 'var(--text-muted)' }}>
-        This typically takes 5–10 seconds
-      </p>
     </div>
   )
 }

@@ -1,67 +1,63 @@
-import { useMemo } from 'react'
+export default function RiskGauge({ score = 0, level = 'UNKNOWN', confidence = 0 }) {
+  const getLevelColor = (lvl) => {
+    switch (lvl) {
+      case 'CRITICAL': return 'text-error hover-shadow-error border-error drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]'
+      case 'HIGH': return 'text-secondary drop-shadow-[0_0_8px_rgba(249,115,22,0.8)] border-secondary hover-shadow-secondary'
+      case 'MEDIUM': return 'text-[#fbbf24] drop-shadow-[0_0_8px_rgba(251,191,36,0.8)] border-[#fbbf24]'
+      case 'LOW':
+      case 'SAFE': return 'text-primary drop-shadow-[0_0_8px_rgba(70,241,197,0.8)] border-primary hover-shadow-primary'
+      default: return 'text-slate-500 border-slate-500'
+    }
+  }
 
-const CIRCUMFERENCE = 2 * Math.PI * 54 // r=54
-const riskColor = (score) => {
-  if (score >= 81) return '#ef4444'
-  if (score >= 61) return '#f97316'
-  if (score >= 31) return '#f59e0b'
-  return '#00d4aa'
-}
+  const getTextColor = (lvl) => {
+    if (lvl === 'CRITICAL') return 'text-error drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+    if (lvl === 'HIGH') return 'text-secondary drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]'
+    if (lvl === 'MEDIUM') return 'text-[#fbbf24] drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]'
+    return 'text-primary drop-shadow-[0_0_10px_rgba(70,241,197,0.5)]'
+  }
 
-export default function RiskGauge({ score = 0, level = 'UNKNOWN', confidence }) {
-  const color = riskColor(score)
-  const offset = useMemo(() => CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE, [score])
-
-  const confColor = { high: '#22c55e', medium: '#f59e0b', low: '#ef4444' }[confidence] || '#475569'
+  const colorClass = getLevelColor(level)
+  const textClass = getTextColor(level)
+  
+  // Calculate SVG dash offset: Circumference = 2 * pi * 76 = ~477.5
+  const circumference = 477.5
+  const dashoffset = circumference - (score / 100) * circumference
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* SVG Gauge */}
-      <div className="relative">
-        <svg className="gauge-svg" width="140" height="140" viewBox="0 0 140 140">
-          {/* Track */}
-          <circle className="track" cx="70" cy="70" r="54" />
-          {/* Fill */}
-          <circle
-            className="fill"
-            cx="70" cy="70" r="54"
-            stroke={color}
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={offset}
-            transform="rotate(-90 70 70)"
-            style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1), stroke 0.5s ease' }}
+    <div className="flex flex-col items-center justify-center p-4">
+      <div className="relative w-40 h-40 rounded-full border-4 border-slate-800 flex items-center justify-center group mb-4">
+        {/* Progress Arc */}
+        <svg className="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none">
+          <circle className="text-slate-800" strokeWidth="6" stroke="currentColor" fill="transparent" r="76" cx="80" cy="80" />
+          <circle 
+            className={`${colorClass} transition-all duration-1000 ease-out`} 
+            strokeWidth="6" 
+            strokeDasharray={circumference} 
+            strokeDashoffset={dashoffset} 
+            strokeLinecap="round" 
+            stroke="currentColor" 
+            fill="transparent" 
+            r="76" cx="80" cy="80" 
           />
-          {/* Glow filter */}
-          <defs>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-          {/* Score text */}
-          <text x="70" y="63" textAnchor="middle" dominantBaseline="middle"
-            style={{ fill: color, fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700 }}>
-            {score}
-          </text>
-          <text x="70" y="83" textAnchor="middle" dominantBaseline="middle"
-            style={{ fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
-            RISK SCORE
-          </text>
         </svg>
-      </div>
 
-      {/* Level badge */}
-      <div className={`px-4 py-1.5 rounded-full font-mono text-sm font-bold risk-${level}`}>
-        {level}
-      </div>
-
-      {/* Confidence */}
-      {confidence && (
-        <div className="flex items-center gap-1.5 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
-          <span>Confidence:</span>
-          <span style={{ color: confColor }} className="font-bold uppercase">{confidence}</span>
+        {/* Center Readout */}
+        <div className="text-center z-10 bg-slate-900 rounded-full w-32 h-32 flex flex-col items-center justify-center border border-outline-variant/30 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-800/50 to-transparent pointer-events-none"></div>
+          <span className={`text-5xl font-headline font-black ${textClass} leading-none`}>
+            {score}
+          </span>
+          <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mt-1">
+            {level === 'UNKNOWN' ? 'CALCULATING' : level}
+          </span>
         </div>
-      )}
+      </div>
+
+      <div className="flex justify-between w-full max-w-[200px] px-2">
+         <span className="font-mono text-[10px] text-slate-500 uppercase tracking-widest">Confidence</span>
+         <span className="font-mono text-[10px] text-primary">{confidence}/100</span>
+      </div>
     </div>
   )
 }

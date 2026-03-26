@@ -1,63 +1,71 @@
-const RISK_COLORS = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#f59e0b', LOW: '#00d4aa', CLEAN: '#22c55e' }
-const TYPE_ICONS = { ip: '🌐', ipv6: '🌐', domain: '🔗', url: '🔗', md5: '🔑', sha1: '🔑', sha256: '🔑', email_header: '✉' }
+import { useState } from 'react'
 
-export default function Sidebar({ history, onSelect, onClear }) {
+const getIcon = (type) => {
+  if (type === 'ip' || type === 'ipv6') return 'lan'
+  if (type === 'domain') return 'public'
+  if (type === 'url') return 'link'
+  if (type === 'hash') return 'fingerprint'
+  if (type === 'email_header') return 'mail'
+  return 'travel_explore'
+}
+
+const getRiskColors = (level) => {
+  if (level === 'CRITICAL') return 'bg-error-container text-on-error-container font-bold'
+  if (level === 'HIGH' || level === 'WARNING') return 'bg-secondary-container text-on-secondary-container font-bold'
+  if (level === 'LOW' || level === 'SAFE') return 'bg-surface-container-highest text-primary font-bold'
+  return 'bg-surface-container text-slate-500'
+}
+
+export default function Sidebar({ history = [], clearHistory, onSelectHistory }) {
   return (
-    <aside className="no-print w-60 shrink-0 border-r border-border-dim overflow-y-auto flex flex-col"
-      style={{ background: 'var(--bg-secondary)' }}>
-      <div className="flex items-center justify-between px-3 py-3 border-b border-border-dim">
-        <span className="font-mono text-xs font-bold" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
-          HISTORY
-        </span>
+    <aside className="fixed left-0 top-16 bottom-0 w-[240px] bg-slate-900/50 dark:bg-slate-950 border-r border-[#46f1c5]/10 flex flex-col py-4 z-40">
+      <div className="px-6 mb-6 flex justify-between items-center">
+        <div>
+          <h3 className="font-mono text-[10px] uppercase tracking-widest text-slate-500">RECENT SCANS</h3>
+          <p className="font-mono text-[9px] text-primary/60">0x44F_INTEL_FEED</p>
+        </div>
         {history.length > 0 && (
-          <button onClick={onClear} className="font-mono text-[10px] px-2 py-0.5 rounded"
-            style={{ color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border-dim)' }}
-            title="Clear history">
-            Clear
+          <button onClick={clearHistory} className="material-symbols-outlined text-sm text-slate-600 hover:text-error transition-colors">
+            delete
           </button>
         )}
       </div>
 
-      {history.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="font-mono text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>
-            No analyses yet.<br />Search an IP, domain,<br />hash, or URL above.
-          </p>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2 custom-scrollbar">
+        {history.length === 0 ? (
+          <div className="px-4 py-8 text-center opacity-40">
+            <span className="material-symbols-outlined text-3xl mb-2">history</span>
+            <p className="font-mono text-[10px]">NO_ARCHIVE_DATA</p>
+          </div>
+        ) : (
+          history.map((item, i) => (
+            <div key={item.id || i} onClick={() => onSelectHistory(item)}
+              className="group flex items-center justify-between p-3 border-l-2 border-transparent text-slate-500 hover:border-[#46f1c5]/50 hover:bg-white/5 transition-all duration-75 cursor-crosshair">
+              
+              <div className="flex items-center gap-3 overflow-hidden">
+                <span className="material-symbols-outlined text-sm shrink-0">{getIcon(item.type)}</span>
+                <div className="flex flex-col truncate">
+                  <span className="font-mono text-[10px] tracking-wider truncate text-ellipsis">{item.input}</span>
+                  <span className="text-[8px] opacity-60">0x{item.id?.substring(0, 4) || 'AF22'}_SEC_CLEAR</span>
+                </div>
+              </div>
+              
+              <span className={`text-[9px] font-mono px-1 shrink-0 ml-2 ${getRiskColors(item.risk_level)}`}>
+                {item.risk_score}/100
+              </span>
+            </div>
+          ))
+        )}
+      </nav>
+
+      <div className="mt-auto px-6 pt-4 border-t border-[#46f1c5]/5">
+        <div className="bg-surface-container-lowest p-3 border border-outline-variant/20">
+          <p className="font-mono text-[10px] text-slate-400 mb-2">SYSTEM_HEALTH</p>
+          <div className="w-full bg-slate-800 h-1">
+            <div className="bg-primary h-full glow-primary animate-pulse" style={{ width: '92%' }}></div>
+          </div>
         </div>
-      ) : (
-        <ul className="flex-1 py-2">
-          {history.map((entry, i) => {
-            const riskColor = entry.riskLevel ? RISK_COLORS[entry.riskLevel] : '#475569'
-            return (
-              <li key={i}>
-                <button onClick={() => onSelect(entry)}
-                  className="w-full text-left px-3 py-2.5 transition-colors"
-                  style={{ borderBottom: '1px solid var(--border-dim)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background = ''}>
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded uppercase"
-                      style={{ background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-dim)' }}>
-                      {TYPE_ICONS[entry.type] || '?'} {entry.type?.replace('_',' ')}
-                    </span>
-                    {entry.riskScore != null && (
-                      <span className="font-mono text-[10px] font-bold" style={{ color: riskColor }}>
-                        {entry.riskScore}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-mono text-[11px] truncate" style={{ color: 'var(--text-primary)' }} title={entry.input}>
-                    {entry.input}
-                  </p>
-                  <p className="font-mono text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}
-                  </p>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      </div>
     </aside>
   )
 }
