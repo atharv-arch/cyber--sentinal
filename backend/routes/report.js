@@ -15,16 +15,8 @@ router.post('/', (req, res) => {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    db.prepare(`
-      INSERT INTO reports (id, input, type, intel_bundle, ai_report, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, intelBundle.input, intelBundle.type, JSON.stringify(intelBundle), JSON.stringify(aiReport), now.toISOString(), expiresAt);
-
-    // Track in history
-    db.prepare(`
-      INSERT INTO history (input, type, risk_score, risk_level, report_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(intelBundle.input, intelBundle.type, aiReport.riskScore || 0, aiReport.riskLevel || 'UNKNOWN', id, now.toISOString());
+    db.saveReport(id, intelBundle.input, intelBundle.type, intelBundle, aiReport, now.toISOString(), expiresAt);
+    db.addHistory(intelBundle.input, intelBundle.type, aiReport.riskScore || 0, aiReport.riskLevel || 'UNKNOWN', id, now.toISOString());
 
     res.json({ id, shareUrl: `/report/${id}`, expiresAt });
   } catch (err) {
@@ -37,19 +29,13 @@ router.post('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const db = getDatabase();
-    const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(req.params.id);
-
+    const report = db.getReport(req.params.id);
     if (!report) return res.status(404).json({ error: 'Report not found or expired' });
-
-    if (new Date(report.expires_at) < new Date()) {
-      db.prepare('DELETE FROM reports WHERE id = ?').run(req.params.id);
-      return res.status(410).json({ error: 'Report has expired' });
-    }
 
     res.json({
       id: report.id,
-      intelBundle: JSON.parse(report.intel_bundle),
-      aiReport: JSON.parse(report.ai_report),
+      intelBundle: report.intel_bundle,
+      aiReport: report.ai_report,
       createdAt: report.created_at,
       expiresAt: report.expires_at
     });
