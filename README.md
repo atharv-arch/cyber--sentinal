@@ -107,4 +107,4 @@ Dark terminal-inspired cyberpunk aesthetic:
 > Security teams are drowning in alerts. Junior analysts spend hours manually correlating data across 6 different tools to investigate a single suspicious IP. CyberSentinel does it in 8 seconds — it fans out across all major threat intel sources simultaneously, and uses AI to synthesize everything into a single actionable report with MITRE ATT&CK mapping, a risk score breakdown, and natural language follow-up. We're not replacing analysts — we're giving them a superpower.
 
 ---
-Built with ❤️ for hackathon • [GitHub](https://github.com/atharv-arch/cyber--sentinal)
+Built with ❤️  • [GitHub](https://github.com/atharv-arch/cyber--sentinal)
